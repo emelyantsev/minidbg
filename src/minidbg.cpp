@@ -1,6 +1,7 @@
 #include <vector>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
+#include <sys/personality.h>
 #include <unistd.h>
 #include <sstream>
 #include <iostream>
@@ -26,6 +27,7 @@ int main( int argc, char* argv[] ) {
 
     if (pid == 0) {
         //child
+        personality(ADDR_NO_RANDOMIZE);
         execute_debugee(prog);
     }
     else if (pid >= 1)  {
@@ -81,6 +83,11 @@ void MiniDbg::Debugger::handle_command(const std::string& line) {
 
         continue_execution();
     }
+    else if(is_prefix(command, "break")) {
+    
+        std::string addr {args[1], 2};
+        set_breakpoint_at_address(std::stoll(addr, 0, 16));
+    }
     else {
         std::cerr << "Unknown command\n";
     }
@@ -124,4 +131,12 @@ void MiniDbg::Debugger::process_status(int status) {
 
         std::cout << "Debuggee was stopped by delivery of a signal " << WSTOPSIG(status) << std::endl;
     }
+}
+
+void MiniDbg::Debugger::set_breakpoint_at_address(std::intptr_t addr) {
+
+    std::cout << "Set breakpoint at address 0x" << std::hex << addr << std::endl;
+    Breakpoint bp {m_pid, addr};
+    bp.Enable();
+    m_breakpoints[addr] = bp;
 }

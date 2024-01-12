@@ -18,6 +18,10 @@ add_executable(unwinding examples/stack_unwinding.cpp)
 set_target_properties(unwinding
                       PROPERTIES COMPILE_FLAGS "-g -O0")
 
+add_executable(hello2 examples/hello2.cpp)
+set_target_properties(hello2
+                      PROPERTIES COMPILE_FLAGS "-g")
+
 
 add_custom_target(
    libelfin
@@ -27,5 +31,5 @@ add_custom_target(
 target_link_libraries(minidbg
                       ${PROJECT_SOURCE_DIR}/ext/libelfin/dwarf/libdwarf++.so
                       ${PROJECT_SOURCE_DIR}/ext/libelfin/elf/libelf++.so)
-                      
+
 add_dependencies(minidbg libelfin)

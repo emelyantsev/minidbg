@@ -3,7 +3,11 @@
 
 #include <utility>
 #include <string>
+#include <unordered_map>
 #include <linux/types.h>
+
+
+#include "breakpoint.hpp"
 
 namespace MiniDbg {
 
@@ -19,12 +23,14 @@ namespace MiniDbg {
     
         void handle_command(const std::string& line);
         void continue_execution();
-        void process_status(int status);        
+        void process_status(int status);
+        void set_breakpoint_at_address(std::intptr_t addr);        
 
     private:    
 
         std::string m_prog_name;
         pid_t m_pid;
+        std::unordered_map<std::intptr_t, Breakpoint> m_breakpoints;
     };
 }
 
