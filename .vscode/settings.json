@@ -52,5 +52,9 @@
         "streambuf": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/ext/linenoise",
+        "${workspaceFolder}/include"
+    ]
 }

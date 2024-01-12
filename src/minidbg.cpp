@@ -5,10 +5,12 @@
 #include <unistd.h>
 #include <sstream>
 #include <iostream>
-
-#include "linenoise.h"
+#include <iomanip>
 
 #include "debugger.hpp"
+#include "registers.hpp"
+
+#include "linenoise.h"
 
 
 void execute_debugee (const std::string& prog_name) ;
@@ -88,6 +90,34 @@ void MiniDbg::Debugger::handle_command(const std::string& line) {
         std::string addr {args[1], 2};
         set_breakpoint_at_address(std::stoll(addr, 0, 16));
     }
+    else if (is_prefix(command, "register")) {
+
+        if (is_prefix(args[1], "dump")) {
+            dump_registers();
+        }
+        else if (is_prefix(args[1], "read")) {
+        
+            std::cout << get_register_value(m_pid, get_register_from_name(args[2])) << std::endl;
+        }
+        else if (is_prefix(args[1], "write")) {
+        
+            std::string val {args[3], 2}; //assume 0xVAL
+            set_register_value(m_pid, get_register_from_name(args[2]), std::stoll(val, 0, 16));
+        }
+    }
+    else if(is_prefix(command, "memory")) {
+        
+        std::string addr {args[2], 2}; //assume 0xADDRESS
+
+        if (is_prefix(args[1], "read")) {
+            std::cout << std::hex << read_memory(std::stol(addr, 0, 16)) << std::endl;
+        }
+        if (is_prefix(args[1], "write")) {
+        
+            std::string val {args[3], 2}; //assume 0xVAL
+            write_memory(std::stol(addr, 0, 16), std::stol(val, 0, 16));
+        }
+    }
     else {
         std::cerr << "Unknown command\n";
     }
@@ -113,12 +143,9 @@ void MiniDbg::Debugger::Run() {
 
 void MiniDbg::Debugger::continue_execution() {
 
+    step_over_breakpoint();
     ptrace(PTRACE_CONT, m_pid, nullptr, nullptr);
-
-    int wait_status;
-    int options = 0;
-    waitpid(m_pid, &wait_status, options);
-    process_status(wait_status);
+    wait_for_signal();
 }
 
 void MiniDbg::Debugger::process_status(int status) {
@@ -139,4 +166,58 @@ void MiniDbg::Debugger::set_breakpoint_at_address(std::intptr_t addr) {
     Breakpoint bp {m_pid, addr};
     bp.Enable();
     m_breakpoints[addr] = bp;
+}
+
+uint64_t MiniDbg::Debugger::read_memory(uint64_t address) {
+
+    return ptrace(PTRACE_PEEKDATA, m_pid, address, nullptr);
+}
+
+void MiniDbg::Debugger::write_memory(uint64_t address, uint64_t value) {
+    ptrace(PTRACE_POKEDATA, m_pid, address, value);
+}
+
+uint64_t MiniDbg::Debugger::get_pc() {
+    return get_register_value(m_pid, MiniDbg::reg::rip);
+}
+
+void MiniDbg::Debugger::set_pc(uint64_t pc) {
+    set_register_value(m_pid, MiniDbg::reg::rip, pc);
+}
+
+void MiniDbg::Debugger::step_over_breakpoint() {
+
+    auto possible_breakpoint_location = get_pc() - 1;
+
+    if (m_breakpoints.count(possible_breakpoint_location)) {
+
+        auto& bp = m_breakpoints[possible_breakpoint_location];
+        
+        if (bp.is_enabled()) {
+        
+            auto previous_instruction_address = possible_breakpoint_location;
+            set_pc(previous_instruction_address);
+
+            bp.Disable();
+            ptrace(PTRACE_SINGLESTEP, m_pid, nullptr, nullptr);
+            wait_for_signal();
+            bp.Enable();
+        }
+    }
+}
+
+void MiniDbg::Debugger::wait_for_signal() {
+ 
+    int wait_status;
+    auto options = 0;
+    waitpid(m_pid, &wait_status, options);
+    process_status(wait_status);
+}
+
+void MiniDbg::Debugger::dump_registers() {
+ 
+    for (const auto& rd : g_register_descriptors) {
+
+        std::cout << rd.name << " 0x" << std::setfill('0') << std::setw(16) << std::hex << get_register_value(m_pid, rd.r) << std::endl;
+    }
 }

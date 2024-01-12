@@ -28,7 +28,7 @@ namespace MiniDbg {
             m_enabled = true;
         }
 
-        void disable() {
+        void Disable() {
 
             auto data = ptrace(PTRACE_PEEKDATA, m_pid, m_addr, nullptr);
             auto restored_data = ((data & ~0xff) | m_saved_data);
