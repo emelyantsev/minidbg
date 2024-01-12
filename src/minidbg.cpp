@@ -60,6 +60,18 @@ bool is_prefix(const std::string& s, const std::string& of) {
     return std::equal(s.begin(), s.end(), of.begin());
 }
 
+void execute_debugee (const std::string& prog_name) {
+    
+    if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
+    
+        std::cerr << "Error in ptrace\n";
+        return;
+    }
+    
+    execl(prog_name.c_str(), prog_name.c_str(), nullptr);
+}
+
+
 void MiniDbg::Debugger::handle_command(const std::string& line) {
 
     auto args = split(line, ' ');
@@ -77,9 +89,10 @@ void MiniDbg::Debugger::handle_command(const std::string& line) {
 void MiniDbg::Debugger::Run() {
 
     int wait_status;
-    auto options = 0;
+    int options = 0;
 
     waitpid(m_pid, &wait_status, options);
+    process_status(wait_status);
 
     char* line = nullptr;
     
@@ -96,17 +109,19 @@ void MiniDbg::Debugger::continue_execution() {
     ptrace(PTRACE_CONT, m_pid, nullptr, nullptr);
 
     int wait_status;
-    auto options = 0;
+    int options = 0;
     waitpid(m_pid, &wait_status, options);
+    process_status(wait_status);
 }
 
-void execute_debugee (const std::string& prog_name) {
-    
-    if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
-    
-        std::cerr << "Error in ptrace\n";
-        return;
+void MiniDbg::Debugger::process_status(int status) {
+
+    if ( WIFEXITED( status ) ) {
+
+        std::cout << "Debugee terminated normally with code " << WEXITSTATUS(status) << std::endl;
     }
-    
-    execl(prog_name.c_str(), prog_name.c_str(), nullptr);
+    else if ( WIFSTOPPED( status ) ) {
+
+        std::cout << "Debuggee was stopped by delivery of a signal " << WSTOPSIG(status) << std::endl;
+    }
 }

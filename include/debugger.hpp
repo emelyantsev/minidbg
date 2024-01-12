@@ -11,14 +11,15 @@ namespace MiniDbg {
     
     public:
 
-        Debugger(const std::string& prog_name, pid_t pid) : m_prog_name(prog_name), m_pid(pid) {}
+        Debugger(const std::string& prog_name, pid_t pid) : m_prog_name( prog_name ), m_pid( pid ) {}
 
         void Run();
 
     private:
     
         void handle_command(const std::string& line);
-        void continue_execution();        
+        void continue_execution();
+        void process_status(int status);        
 
     private:    
 
