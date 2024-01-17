@@ -55,6 +55,7 @@
     },
     "C_Cpp.default.includePath": [
         "${workspaceFolder}/ext/linenoise",
-        "${workspaceFolder}/include"
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/ext/libelfin"
     ]
 }

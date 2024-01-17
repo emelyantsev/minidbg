@@ -20,7 +20,7 @@ set_target_properties(unwinding
 
 add_executable(hello2 examples/hello2.cpp)
 set_target_properties(hello2
-                      PROPERTIES COMPILE_FLAGS "-g")
+                      PROPERTIES COMPILE_FLAGS "-gdwarf-2")
 
 
 add_custom_target(
