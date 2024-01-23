@@ -22,6 +22,9 @@ add_executable(hello2 examples/hello2.cpp)
 set_target_properties(hello2
                       PROPERTIES COMPILE_FLAGS "-gdwarf-2")
 
+add_executable(test_hex examples/test_hex.cpp)
+set_target_properties(test_hex
+                     PROPERTIES COMPILE_FLAGS "-gdwarf-2")
 
 add_custom_target(
    libelfin
