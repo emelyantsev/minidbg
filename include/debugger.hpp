@@ -7,6 +7,7 @@
 #include <linux/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include "breakpoint.hpp"
 
@@ -19,32 +20,36 @@ namespace MiniDbg {
     
     public:
 
-        Debugger(const std::string& prog_name, pid_t pid) ;
+        Debugger( const std::string& prog_name, pid_t pid ) ;
+
         void Run();
 
     private:
     
-        void handle_command(const std::string& line);
+        void handle_command( const std::string& line );
         void continue_execution();
-        void process_status(int status);
-        void set_breakpoint_at_address(std::intptr_t addr);    
+        void process_status( int status );
+
+        void set_breakpoint_at_address( std::intptr_t addr );    
         void dump_registers(); 
+        
         uint64_t get_pc();
-        void set_pc(uint64_t pc);
+        void set_pc( uint64_t pc );
+
         void step_over_breakpoint();
         void wait_for_signal();
         siginfo_t get_signal_info();
-        void handle_sigtrap(siginfo_t info);
+        void handle_sigtrap( siginfo_t info );
 
         void initialise_load_address();
-        uint64_t offset_load_address(uint64_t addr);
+        uint64_t offset_load_address( uint64_t addr );
 
-        dwarf::die get_function_from_pc(uint64_t pc);
-        dwarf::line_table::iterator get_line_entry_from_pc(uint64_t pc);
+        dwarf::die get_function_from_pc( uint64_t pc );
+        dwarf::line_table::iterator get_line_entry_from_pc( uint64_t pc );
 
-        uint64_t read_memory(uint64_t address);
-        void write_memory(uint64_t address, uint64_t value);   
-        void print_source(const std::string& file_name, unsigned line, unsigned n_lines_context=2);
+        uint64_t read_memory( uint64_t address );
+        void write_memory( uint64_t address, uint64_t value );   
+        void print_source( const std::string& file_name, unsigned line, unsigned n_lines_context = 2 );
 
     private:    
 

@@ -28,4 +28,6 @@ int main() {
 
     *(ptr) += 1;
     */
+
+   std::cout << sizeof(long) << std::endl;
 }

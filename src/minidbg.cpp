@@ -14,29 +14,32 @@
 #include "linenoise.h"
 
 
-void execute_debugee (const std::string& prog_name) ;
+void execute_debugee ( const std::string& prog_name ) ;
+
+
+/* -----------------  Main ------------------- */ 
 
 
 int main( int argc, char* argv[] ) {
 
-    if (argc < 2) {
+    if ( argc < 2 )  {
     
         std::cerr << "Program name not specified";
         return -1;
     }
 
-    auto prog = argv[1];
-    auto pid = fork();
+    char* prog = argv[1];
+    pid_t pid = fork();
 
-    if (pid == 0) {
-        //child
-        personality(ADDR_NO_RANDOMIZE);
-        execute_debugee(prog);
+    if ( pid == 0 ) {  // child
+        
+        personality( ADDR_NO_RANDOMIZE );
+        execute_debugee( prog );
     }
-    else if (pid >= 1)  {
-        //parent
+    else if ( pid >= 1 )  {   // parent
+        
         std::cout << "Started debugging process " << pid << '\n';
-        MiniDbg::Debugger dbg{prog, pid};
+        MiniDbg::Debugger dbg( prog, pid );
         dbg.Run();
     }
 
@@ -44,40 +47,14 @@ int main( int argc, char* argv[] ) {
 }
 
 
-std::vector<std::string> split(const std::string& s, char delimiter) {
-
-    std::vector<std::string> out;
-    std::stringstream ss(s);
-    std::string item;
-
-    while (std::getline(ss, item, delimiter)) {
-        out.push_back(item);
-    }
-
-    return out;
-}
+/* ----------------- end main -------------------- */
 
 
-bool is_prefix(const std::string& s, const std::string& of) {
+/* ------------------- helpers ------------------- */
+
+void execute_debugee ( const std::string& prog_name ) {
     
-    if (s.size() > of.size()) return false;
-
-    return std::equal(s.begin(), s.end(), of.begin());
-}
-
-
-MiniDbg::Debugger::Debugger(const std::string& prog_name, pid_t pid) : m_prog_name( prog_name ), m_pid( pid ) {
-
-    auto fd = open(m_prog_name.c_str(), O_RDONLY);
-
-    m_elf = elf::elf{ elf::create_mmap_loader(fd) };
-    m_dwarf = dwarf::dwarf{ dwarf::elf::create_loader(m_elf) };
-}
-
-
-void execute_debugee (const std::string& prog_name) {
-    
-    if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
+    if ( ptrace( PTRACE_TRACEME, 0, 0, 0 ) < 0) {
     
         std::cerr << "Error in ptrace\n";
         return;
@@ -87,12 +64,64 @@ void execute_debugee (const std::string& prog_name) {
 }
 
 
+std::vector<std::string> split( const std::string& s, char delimiter ) {
+
+    std::vector<std::string> out;
+    std::stringstream ss( s );
+    std::string item;
+
+    while ( std::getline( ss, item, delimiter ) ) 
+    {
+        out.push_back(item);
+    }
+
+    return out;
+}
+
+
+bool is_prefix( const std::string& s, const std::string& of ) {
+    
+    if ( s.size() > of.size() ) {
+        
+        return false;
+    }
+        
+    return std::equal( s.begin(), s.end(), of.begin() );
+}
+
+
+/* ----------------- Debugger -------------- */
+
+
+MiniDbg::Debugger::Debugger( const std::string& prog_name, pid_t pid ) : m_prog_name( prog_name ), m_pid( pid ) {
+
+    int fd = open( m_prog_name.c_str(), O_RDONLY );
+
+    m_elf = elf::elf( elf::create_mmap_loader( fd ) );
+    m_dwarf = dwarf::dwarf( dwarf::elf::create_loader( m_elf ) );
+}
+
+void MiniDbg::Debugger::Run() {
+
+    wait_for_signal();
+    initialise_load_address();
+
+    char* line = nullptr;
+
+    while( ( line = linenoise( "minidbg> " ) ) != nullptr ) {
+        
+        handle_command( line );
+        linenoiseHistoryAdd( line );
+        linenoiseFree( line );
+    }
+}
+
 void MiniDbg::Debugger::handle_command(const std::string& line) {
 
-    auto args = split(line, ' ');
-    auto command = args[0];
+    std::vector<std::string> args = split( line, ' ' );
+    std::string command = args[0];
 
-    if (is_prefix(command, "cont")) {
+    if ( is_prefix( command, "cont" ) ) {
 
         continue_execution();
     }
@@ -134,20 +163,6 @@ void MiniDbg::Debugger::handle_command(const std::string& line) {
     }
 }
 
-void MiniDbg::Debugger::Run() {
-
-    wait_for_signal();
-    initialise_load_address();
-
-    char* line = nullptr;
-
-    while( ( line = linenoise("minidbg> ") ) != nullptr ) {
-        
-        handle_command( line );
-        linenoiseHistoryAdd( line );
-        linenoiseFree( line );
-    }
-}
 
 void MiniDbg::Debugger::continue_execution() {
 
@@ -160,20 +175,27 @@ void MiniDbg::Debugger::process_status(int status) {
 
     if ( WIFEXITED( status ) ) {
 
-        std::cout << "Debugee terminated normally with code " << WEXITSTATUS(status) << std::endl;
+        std::cout << "Debugee terminated normally with code " << WEXITSTATUS( status ) << std::endl;
     }
     else if ( WIFSTOPPED( status ) ) {
 
-        std::cout << "Debuggee was stopped by delivery of a signal " << WSTOPSIG(status) << std::endl;
+        std::cout << "Debuggee was stopped by delivery of a signal " << WSTOPSIG( status ) << std::endl;
+    }
+    else {
+
+        std::cout << "Unknown waiting status" << std::endl;
     }
 }
 
 void MiniDbg::Debugger::set_breakpoint_at_address( std::intptr_t addr ) {
 
-    std::cout << "Set breakpoint at address 0x" << std::hex << addr << std::endl;
-    Breakpoint bp { m_pid, addr };
+    std::cout << "Set breakpoint at address " << std::showbase << std::hex << addr << std::endl;
+
+    Breakpoint bp(m_pid, addr);
     bp.Enable();
-    m_breakpoints[addr] = bp;
+
+    m_breakpoints.emplace( addr, bp ) ;
+
 }
 
 uint64_t MiniDbg::Debugger::read_memory(uint64_t address) {
@@ -197,7 +219,7 @@ void MiniDbg::Debugger::step_over_breakpoint() {
 
     if (m_breakpoints.count( get_pc() ) ) {
 
-        auto& bp = m_breakpoints[get_pc()];
+        auto& bp = m_breakpoints.at( get_pc() );
         
         if (bp.is_enabled()) {
         
@@ -212,23 +234,23 @@ void MiniDbg::Debugger::step_over_breakpoint() {
 void MiniDbg::Debugger::wait_for_signal() {
  
     int wait_status;
-    auto options = 0;
-    waitpid(m_pid, &wait_status, options);
+    int options = 0;
 
-    process_status(wait_status);
+    waitpid( m_pid, &wait_status, options );
+    process_status( wait_status );
 
-    auto siginfo = get_signal_info();
+    siginfo_t siginfo = get_signal_info();
 
-    switch (siginfo.si_signo) {
+    switch ( siginfo.si_signo ) {
 
         case SIGTRAP:
-            handle_sigtrap(siginfo);
+            handle_sigtrap( siginfo );
             break;
         case SIGSEGV:
             std::cout << "Yay, segfault. Reason: " << siginfo.si_code << std::endl;
             break;
         default:
-            std::cout << "Got signal " << strsignal(siginfo.si_signo) << std::endl;
+            std::cout << "Got signal " << strsignal( siginfo.si_signo ) << std::endl;
     }
 }
 
@@ -243,12 +265,14 @@ void MiniDbg::Debugger::dump_registers() {
 
 void MiniDbg::Debugger::initialise_load_address() {
 
-    if (m_elf.get_hdr().type == elf::et::dyn) {
+    if ( m_elf.get_hdr().type == elf::et::dyn ) {
       
-        std::ifstream map("/proc/" + std::to_string(m_pid) + "/maps");
+        std::ifstream map( "/proc/" + std::to_string(m_pid) + "/maps" );
         std::string addr;
-        std::getline(map, addr, '-');
-        m_load_address = std::stoll(addr, 0, 16);
+        std::getline( map, addr, '-' );
+        m_load_address = std::stoul( addr, 0, 16 );
+
+        std::cout << "Load address is " << std::showbase << std::hex << m_load_address << std::endl;
     }
 }
 
@@ -339,15 +363,17 @@ siginfo_t MiniDbg::Debugger::get_signal_info() {
     return info;
 }
 
-void MiniDbg::Debugger::handle_sigtrap(siginfo_t info) {
+void MiniDbg::Debugger::handle_sigtrap( siginfo_t info ) {
 
-    switch (info.si_code) {
+    switch ( info.si_code ) {
         
         case SI_KERNEL:
         case TRAP_BRKPT:
         {
             set_pc( get_pc() - 1 );
+
             std::cout << "Hit breakpoint at address 0x" << std::hex << get_pc() << std::endl;
+            
             auto offset_pc = offset_load_address( get_pc() ); 
             auto line_entry = get_line_entry_from_pc( offset_pc );
             
