@@ -7,20 +7,20 @@
 
 #### Debugger usage
 
-> minidbg <program name>
-
 ```
-   cont   [continue]
+minidbg <program name>
 
-   break <OxADDRESS>
+cont   [continue]
 
-   register <dump>
-   register <read> <register_name>
-   register <write> <register_name> <0xVALUE>
+break <OxADDRESS>
 
-   memory <read> <0xADDRESS>
-   memory <write> <0xADDRESS> <0xVALUE>
+register <dump>
+register <read> <register_name>
+register <write> <register_name> <0xVALUE>
 
-   Ctrl+D   [exit]
+memory <read> <0xADDRESS>
+memory <write> <0xADDRESS> <0xVALUE>
+
+Ctrl+D   [exit]
 
 ```
