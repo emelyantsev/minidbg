@@ -8,10 +8,10 @@
 
 ____________________________________________________________________
 
-#### Debugger usage
+#### Usage:
 
 ```
-**./minidbg <program name>**
+./minidbg <program name>
 
 cont   [continue]
 
