@@ -2,8 +2,10 @@
 
 1. [Setup](https://blog.tartanllama.xyz/writing-a-linux-debugger-setup/)
 2. [Breakpoints](https://blog.tartanllama.xyz/writing-a-linux-debugger-breakpoints/)
-3. [Registers and memory](https://blog.tartanllama.xyz/writing-a-linux-debugger-registers//)
+3. [Registers and memory](https://blog.tartanllama.xyz/writing-a-linux-debugger-registers/)
+4. [Elves and dwarves](https://blog.tartanllama.xyz/writing-a-linux-debugger-elf-dwarf/)
 
+____________________________________________________________________
 
 #### Debugger usage
 
