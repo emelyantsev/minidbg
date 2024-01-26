@@ -24,7 +24,7 @@ int main( int argc, char* argv[] ) {
 
     if ( argc < 2 )  {
     
-        std::cerr << "Program name not specified";
+        std::cerr << "Usage: minidbg <program_name>" << std::endl;
         return -1;
     }
 
@@ -116,7 +116,7 @@ void MiniDbg::Debugger::Run() {
     }
 }
 
-void MiniDbg::Debugger::handle_command(const std::string& line) {
+void MiniDbg::Debugger::handle_command( const std::string& line ) {
 
     std::vector<std::string> args = split( line, ' ' );
     std::string command = args[0];
@@ -127,7 +127,7 @@ void MiniDbg::Debugger::handle_command(const std::string& line) {
     }
     else if( is_prefix( command, "break" ) ) {
     
-        std::string addr ( args[1], 2 );
+        std::string addr ( args[1], 2 ); // assume 0xADDRESS
         set_breakpoint_at_address( std::stol( addr, 0, 16 ) );
     }
     else if (is_prefix( command, "register" ) ) {
@@ -136,27 +136,28 @@ void MiniDbg::Debugger::handle_command(const std::string& line) {
             
             dump_registers();
         }
-        else if ( is_prefix(args[1], "read") ) {
+        else if ( is_prefix( args[1], "read" ) ) {
         
-            std::cout << get_register_value( m_pid, get_register_from_name(args[2]) ) << std::endl;
+            std::cout << get_register_value( m_pid, get_register_from_name( args[2] ) ) << std::endl;
         }
-        else if (is_prefix(args[1], "write")) {
+        else if ( is_prefix( args[1], "write" ) ) {
         
-            std::string val {args[3], 2}; //assume 0xVAL
-            set_register_value( m_pid, get_register_from_name(args[2]), std::stoll(val, 0, 16) );
+            std::string val( args[3], 2 ); //assume 0xVAL
+            set_register_value( m_pid, get_register_from_name(args[2]), std::stoul( val, 0, 16 ) );
         }
     }
-    else if(is_prefix(command, "memory")) {
+    else if(is_prefix( command, "memory" ) ) {
         
-        std::string addr {args[2], 2}; //assume 0xADDRESS
+        std::string addr ( args[2], 2 ); //assume 0xADDRESS
 
-        if (is_prefix(args[1], "read")) {
-            std::cout << std::hex << read_memory(std::stol(addr, 0, 16)) << std::endl;
+        if ( is_prefix( args[1], "read" ) ) {
+
+            std::cout << std::hex << read_memory( std::stol( addr, 0, 16 ) ) << std::endl;
         }
-        if (is_prefix(args[1], "write")) {
+        else if ( is_prefix( args[1], "write" ) ) {
         
-            std::string val {args[3], 2}; //assume 0xVAL
-            write_memory(std::stol(addr, 0, 16), std::stol(val, 0, 16));
+            std::string val (args[3], 2); //assume 0xVAL
+            write_memory( std::stol( addr, 0, 16 ), std::stol(val, 0, 16));
         }
     }
     else {
@@ -198,35 +199,36 @@ void MiniDbg::Debugger::set_breakpoint_at_address( std::intptr_t addr ) {
     m_breakpoints.emplace( addr, bp ) ;
 }
 
-uint64_t MiniDbg::Debugger::read_memory(uint64_t address) {
+uint64_t MiniDbg::Debugger::read_memory( uint64_t address ) {
 
-    return ptrace(PTRACE_PEEKDATA, m_pid, address, nullptr);
+    return ptrace( PTRACE_PEEKDATA, m_pid, address, nullptr );
 }
 
-void MiniDbg::Debugger::write_memory(uint64_t address, uint64_t value) {
-    ptrace(PTRACE_POKEDATA, m_pid, address, value);
+void MiniDbg::Debugger::write_memory( uint64_t address, uint64_t value ) {
+
+    ptrace( PTRACE_POKEDATA, m_pid, address, value );
 }
 
 uint64_t MiniDbg::Debugger::get_pc() {
 
-    return get_register_value( m_pid, MiniDbg::reg::rip );
+    return get_register_value( m_pid, MiniDbg::Register::rip );
 }
 
 void MiniDbg::Debugger::set_pc( uint64_t pc)  {
 
-    set_register_value( m_pid, MiniDbg::reg::rip, pc );
+    set_register_value( m_pid, MiniDbg::Register::rip, pc );
 }
 
 void MiniDbg::Debugger::step_over_breakpoint() {
 
-    if (m_breakpoints.count( get_pc() ) ) {
+    if ( m_breakpoints.count( get_pc() ) ) {
 
-        auto& bp = m_breakpoints.at( get_pc() );
+        MiniDbg::Breakpoint& bp = m_breakpoints.at( get_pc() );
         
-        if (bp.is_enabled()) {
+        if ( bp.is_enabled() ) {
         
             bp.Disable();
-            ptrace(PTRACE_SINGLESTEP, m_pid, nullptr, nullptr);
+            ptrace( PTRACE_SINGLESTEP, m_pid, nullptr, nullptr );
             wait_for_signal();
             bp.Enable();
         }
@@ -258,9 +260,9 @@ void MiniDbg::Debugger::wait_for_signal() {
 
 void MiniDbg::Debugger::dump_registers() {
  
-    for (const auto& rd : g_register_descriptors) {
+    for (const MiniDbg::RegDescriptor& rd : g_register_descriptors) {
 
-        std::cout << rd.name << " 0x" << std::setfill('0') << std::setw(16) << std::hex << get_register_value(m_pid, rd.r) << std::endl;
+        std::cout << rd.name << std::showbase << std::setfill('0') << std::setw(16) << std::hex << get_register_value(m_pid, rd.r) << std::endl;
     }
 }
 
@@ -269,11 +271,10 @@ void MiniDbg::Debugger::initialise_load_address() {
 
     if ( m_elf.get_hdr().type == elf::et::dyn ) {
       
-        std::ifstream map( "/proc/" + std::to_string(m_pid) + "/maps" );
+        std::ifstream map( "/proc/" + std::to_string( m_pid ) + "/maps" );
         std::string addr;
         std::getline( map, addr, '-' );
         m_load_address = std::stoul( addr, 0, 16 );
-
         std::cout << "Load address is " << std::showbase << std::hex << m_load_address << std::endl;
     }
 }
@@ -380,15 +381,16 @@ void MiniDbg::Debugger::handle_sigtrap( siginfo_t info ) {
             dwarf::line_table::iterator line_entry = get_line_entry_from_pc( offset_pc );
             
             print_source( line_entry->file->path, line_entry->line );     
-            return;
+            break;
         }
         case TRAP_TRACE:
 
-            return;
+            std::cout << "Got TRAP_TRACE code " << std::dec << info.si_code << std::endl;
+            break;
 
         default:
             
-            std::cout << "Unknown SIGTRAP code " << info.si_code << std::endl;
-            return;
+            std::cout << "Unknown SIGTRAP code " << std::dec << info.si_code << std::endl;
+            break;
     }
 }
