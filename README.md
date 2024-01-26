@@ -4,13 +4,14 @@
 2. [Breakpoints](https://blog.tartanllama.xyz/writing-a-linux-debugger-breakpoints/)
 3. [Registers and memory](https://blog.tartanllama.xyz/writing-a-linux-debugger-registers/)
 4. [Elves and dwarves](https://blog.tartanllama.xyz/writing-a-linux-debugger-elf-dwarf/)
+5. [Source and signals](https://blog.tartanllama.xyz/writing-a-linux-debugger-source-signal/)
 
 ____________________________________________________________________
 
 #### Debugger usage
 
 ```
-minidbg <program name>
+**./minidbg <program name>**
 
 cont   [continue]
 

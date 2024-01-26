@@ -14,6 +14,8 @@ int main() {
 
     print(x);
 
+    ++x;
+
     print(x);
     
     return 0;

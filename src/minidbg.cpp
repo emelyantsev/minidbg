@@ -279,22 +279,23 @@ void MiniDbg::Debugger::initialise_load_address() {
     }
 }
 
-uint64_t MiniDbg::Debugger::offset_load_address(uint64_t addr) {
+uint64_t MiniDbg::Debugger::offset_load_address( uint64_t addr ) {
 
    return addr - m_load_address;
 }
 
-dwarf::die MiniDbg::Debugger::get_function_from_pc(uint64_t pc) {
+dwarf::die MiniDbg::Debugger::get_function_from_pc( uint64_t pc ) {
 
-    for (auto &cu : m_dwarf.compilation_units() ) {
+    for  ( const dwarf::compilation_unit& cu : m_dwarf.compilation_units() ) {
     
-        if (die_pc_range( cu.root() ).contains(pc) ) {
+        if ( dwarf::die_pc_range( cu.root() ).contains( pc ) ) {
     
-            for (const auto& die : cu.root()) {
+            for ( const dwarf::die& die : cu.root() ) {
     
-                if (die.tag == dwarf::DW_TAG::subprogram) {
+                if ( die.tag == dwarf::DW_TAG::subprogram ) {
     
-                    if (die_pc_range(die).contains(pc)) {
+                    if ( dwarf::die_pc_range( die ).contains( pc ) ) {
+
                         return die;
                     }
                 }
@@ -302,57 +303,59 @@ dwarf::die MiniDbg::Debugger::get_function_from_pc(uint64_t pc) {
         }
     }
 
-    throw std::out_of_range{"Cannot find function"};
+    throw std::out_of_range( "Cannot find function" );
 }
 
-dwarf::line_table::iterator MiniDbg::Debugger::get_line_entry_from_pc(uint64_t pc) {
+dwarf::line_table::iterator MiniDbg::Debugger::get_line_entry_from_pc( uint64_t pc ) {
 
-    for ( auto &cu : m_dwarf.compilation_units() ) {
+    for ( const dwarf::compilation_unit& cu : m_dwarf.compilation_units() ) {
 
-        if ( die_pc_range( cu.root() ).contains(pc) ) {
+        if ( die_pc_range( cu.root() ).contains( pc ) ) {
         
-            auto &lt = cu.get_line_table();
-            auto it = lt.find_address(pc);
+            const dwarf::line_table& lt = cu.get_line_table();
+            dwarf::line_table::iterator it = lt.find_address( pc );
         
             if ( it == lt.end() ) {
-                throw std::out_of_range{"Cannot find line entry"};
+
+                throw std::out_of_range( "Cannot find line entry" );
             }
             else {
+
                 return it;
             }
         }
     }
 
-    throw std::out_of_range{"Cannot find line entry"};
+    throw std::out_of_range( "Cannot find line entry" );
 }
 
-void MiniDbg::Debugger::print_source(const std::string& file_name, unsigned line, unsigned n_lines_context) {
+void MiniDbg::Debugger::print_source( const std::string& file_name, unsigned line, unsigned n_lines_context ) {
 
-    std::ifstream file {file_name};
+    std::ifstream file ( file_name );
 
-    auto start_line = line <= n_lines_context ? 1 : line - n_lines_context;
-    auto end_line = line + n_lines_context + (line < n_lines_context ? n_lines_context - line : 0) + 1;
+    unsigned int start_line = line <= n_lines_context ? 1 : line - n_lines_context;
+    unsigned int end_line = line + n_lines_context + ( line < n_lines_context ? n_lines_context - line : 0 ) + 1;
 
     char c;
-    auto current_line = 1u;
+    unsigned int current_line = 1u;
     
-    while ( current_line != start_line && file.get(c) ) {
+    while ( current_line != start_line && file.get( c ) ) {
     
         if (c == '\n') {
             ++current_line;
         }
     }
 
-    std::cout << (current_line == line ? "> " : "  ");
+    std::cout << ( current_line == line ? "> " : "  " );
 
-    while (current_line <= end_line && file.get(c)) {
+    while ( current_line <= end_line && file.get( c ) ) {
 
         std::cout << c;
 
-        if (c == '\n') {
+        if ( c == '\n' ) {
 
             ++current_line;
-            std::cout << (current_line==line ? "> " : "  ");
+            std::cout << ( current_line == line ? "> " : "  " );
         }
     }
 
