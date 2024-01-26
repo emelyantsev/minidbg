@@ -24,7 +24,7 @@ set_target_properties(hello2
 
 add_executable(test_hex examples/test_hex.cpp)
 set_target_properties(test_hex
-                     PROPERTIES COMPILE_FLAGS "-gdwarf-2")
+                     PROPERTIES COMPILE_FLAGS "-gdwarf-2  -O0")
 
 add_executable(test_types examples/test_types.cpp)
 set_target_properties(test_types

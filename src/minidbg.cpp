@@ -125,17 +125,18 @@ void MiniDbg::Debugger::handle_command(const std::string& line) {
 
         continue_execution();
     }
-    else if(is_prefix(command, "break")) {
+    else if( is_prefix( command, "break" ) ) {
     
-        std::string addr { args[1], 2 };
-        set_breakpoint_at_address( std::stoll(addr, 0, 16) );
+        std::string addr ( args[1], 2 );
+        set_breakpoint_at_address( std::stol( addr, 0, 16 ) );
     }
-    else if (is_prefix(command, "register")) {
+    else if (is_prefix( command, "register" ) ) {
 
-        if (is_prefix(args[1], "dump")) {
+        if ( is_prefix( args[1], "dump" ) ) {
+            
             dump_registers();
         }
-        else if (is_prefix(args[1], "read")) {
+        else if ( is_prefix(args[1], "read") ) {
         
             std::cout << get_register_value( m_pid, get_register_from_name(args[2]) ) << std::endl;
         }
@@ -175,11 +176,11 @@ void MiniDbg::Debugger::process_status(int status) {
 
     if ( WIFEXITED( status ) ) {
 
-        std::cout << "Debugee terminated normally with code " << WEXITSTATUS( status ) << std::endl;
+        std::cout << "Debugee terminated normally with code " << std::dec << WEXITSTATUS( status ) << std::endl;
     }
     else if ( WIFSTOPPED( status ) ) {
 
-        std::cout << "Debuggee was stopped by delivery of a signal " << WSTOPSIG( status ) << std::endl;
+        std::cout << "Debuggee was stopped by delivery of a signal " << std::dec << WSTOPSIG( status ) << std::endl;
     }
     else {
 
@@ -189,13 +190,12 @@ void MiniDbg::Debugger::process_status(int status) {
 
 void MiniDbg::Debugger::set_breakpoint_at_address( std::intptr_t addr ) {
 
-    std::cout << "Set breakpoint at address " << std::showbase << std::hex << addr << std::endl;
+    std::cout << "Setting breakpoint at address " << std::showbase << std::hex << addr << std::endl;
 
-    Breakpoint bp(m_pid, addr);
+    Breakpoint bp( m_pid, addr );
     bp.Enable();
 
     m_breakpoints.emplace( addr, bp ) ;
-
 }
 
 uint64_t MiniDbg::Debugger::read_memory(uint64_t address) {
@@ -208,11 +208,13 @@ void MiniDbg::Debugger::write_memory(uint64_t address, uint64_t value) {
 }
 
 uint64_t MiniDbg::Debugger::get_pc() {
-    return get_register_value(m_pid, MiniDbg::reg::rip);
+
+    return get_register_value( m_pid, MiniDbg::reg::rip );
 }
 
-void MiniDbg::Debugger::set_pc(uint64_t pc) {
-    set_register_value(m_pid, MiniDbg::reg::rip, pc);
+void MiniDbg::Debugger::set_pc( uint64_t pc)  {
+
+    set_register_value( m_pid, MiniDbg::reg::rip, pc );
 }
 
 void MiniDbg::Debugger::step_over_breakpoint() {
@@ -250,7 +252,7 @@ void MiniDbg::Debugger::wait_for_signal() {
             std::cout << "Yay, segfault. Reason: " << siginfo.si_code << std::endl;
             break;
         default:
-            std::cout << "Got signal " << strsignal( siginfo.si_signo ) << std::endl;
+            std::cout << "Got signal " << std::dec << siginfo.si_signo << " " << "\"" << strsignal( siginfo.si_signo ) << "\"" << std::endl;
     }
 }
 
@@ -359,7 +361,7 @@ void MiniDbg::Debugger::print_source(const std::string& file_name, unsigned line
 siginfo_t MiniDbg::Debugger::get_signal_info() {
 
     siginfo_t info;
-    ptrace(PTRACE_GETSIGINFO, m_pid, nullptr, &info);
+    ptrace( PTRACE_GETSIGINFO, m_pid, nullptr, &info );
     return info;
 }
 
@@ -372,17 +374,16 @@ void MiniDbg::Debugger::handle_sigtrap( siginfo_t info ) {
         {
             set_pc( get_pc() - 1 );
 
-            std::cout << "Hit breakpoint at address 0x" << std::hex << get_pc() << std::endl;
+            std::cout << "Hit breakpoint at address " << std::showbase << std::hex << get_pc() << std::endl;
             
-            auto offset_pc = offset_load_address( get_pc() ); 
-            auto line_entry = get_line_entry_from_pc( offset_pc );
+            uint64_t offset_pc = offset_load_address( get_pc() ); 
+            dwarf::line_table::iterator line_entry = get_line_entry_from_pc( offset_pc );
             
-            print_source( line_entry->file->path, line_entry->line );
-            
+            print_source( line_entry->file->path, line_entry->line );     
             return;
         }
         case TRAP_TRACE:
-            
+
             return;
 
         default:

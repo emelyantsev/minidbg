@@ -29,5 +29,7 @@ int main() {
     *(ptr) += 1;
     */
 
-   std::cout << sizeof(long) << std::endl;
+    // std::cout << sizeof(long) << std::endl;
+
+    return 0;
 }
