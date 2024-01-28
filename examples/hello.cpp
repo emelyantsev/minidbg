@@ -1,5 +1,8 @@
 #include <iostream>
 
-int main () {
-    std::cerr << "Hello world";
+int main() {
+
+    std::cout << "Hello world" << std::endl;
+
+    return 0;
 }
