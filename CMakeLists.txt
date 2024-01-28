@@ -26,6 +26,10 @@ add_executable(hello3 examples/hello3.cpp)
 set_target_properties(hello3
                      PROPERTIES COMPILE_FLAGS "-gdwarf-2 -O0")
 
+add_executable(hello4 examples/hello4.cpp)
+set_target_properties(hello4
+                     PROPERTIES COMPILE_FLAGS "-gdwarf-2 -O0")
+
 add_executable(test_hex examples/test_hex.cpp)
 set_target_properties(test_hex
                      PROPERTIES COMPILE_FLAGS "-gdwarf-2  -O0")

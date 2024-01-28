@@ -101,6 +101,7 @@ MiniDbg::Debugger::Debugger( const std::string& prog_name, pid_t pid ) : m_prog_
     m_dwarf = dwarf::dwarf( dwarf::elf::create_loader( m_elf ) );
 }
 
+
 void MiniDbg::Debugger::Run() {
 
     wait_for_signal();
@@ -108,13 +109,14 @@ void MiniDbg::Debugger::Run() {
 
     char* line = nullptr;
 
-    while( ( line = linenoise( "minidbg> " ) ) != nullptr ) {
+    while( ( line = linenoise( "(minidbg) " ) ) != nullptr ) {
         
         handle_command( line );
         linenoiseHistoryAdd( line );
         linenoiseFree( line );
     }
 }
+
 
 void MiniDbg::Debugger::handle_command( const std::string& line ) {
 
@@ -125,12 +127,24 @@ void MiniDbg::Debugger::handle_command( const std::string& line ) {
 
         continue_execution();
     }
-    else if( is_prefix( command, "break" ) ) {
+    else if ( is_prefix( command, "break" ) ) {
     
         std::string addr ( args[1], 2 ); // assume 0xADDRESS
         set_breakpoint_at_address( std::stol( addr, 0, 16 ) );
     }
-    else if (is_prefix( command, "register" ) ) {
+    else if( is_prefix( command, "step" ) ) {
+        
+        step_in();
+    }
+    else if( is_prefix( command, "next" ) ) {
+     
+        step_over();
+    }
+    else if ( is_prefix( command, "finish" ) ) {
+        
+        step_out();
+    }
+    else if ( is_prefix( command, "register" ) ) {
 
         if ( is_prefix( args[1], "dump" ) ) {
             
@@ -146,18 +160,31 @@ void MiniDbg::Debugger::handle_command( const std::string& line ) {
             set_register_value( m_pid, get_register_from_name(args[2]), std::stoul( val, 0, 16 ) );
         }
     }
-    else if(is_prefix( command, "memory" ) ) {
+    else if( is_prefix( command, "memory" ) ) {
         
         std::string addr ( args[2], 2 ); //assume 0xADDRESS
 
         if ( is_prefix( args[1], "read" ) ) {
 
-            std::cout << std::hex << read_memory( std::stol( addr, 0, 16 ) ) << std::endl;
+            std::cout << std::hex << read_memory( std::stoul( addr, 0, 16 ) ) << std::endl;
         }
         else if ( is_prefix( args[1], "write" ) ) {
         
             std::string val (args[3], 2); //assume 0xVAL
-            write_memory( std::stol( addr, 0, 16 ), std::stol(val, 0, 16));
+            write_memory( std::stol( addr, 0, 16 ), std::stoul(val, 0, 16));
+        }
+    }
+    else if( is_prefix( command, "stepi" ) ) {
+
+        single_step_instruction_with_breakpoint_check();
+
+        try {
+            dwarf::line_table::iterator line_entry = get_line_entry_from_pc( offset_load_address( get_pc() ) );
+            print_source( line_entry->file->path, line_entry->line );
+        }
+        catch ( std::exception& e ) {
+
+            std::cerr << "Error printing source " << e.what() << std::endl;
         }
     }
     else {
@@ -169,9 +196,10 @@ void MiniDbg::Debugger::handle_command( const std::string& line ) {
 void MiniDbg::Debugger::continue_execution() {
 
     step_over_breakpoint();
-    ptrace(PTRACE_CONT, m_pid, nullptr, nullptr);
+    ptrace( PTRACE_CONT, m_pid, nullptr, nullptr );
     wait_for_signal();
 }
+
 
 void MiniDbg::Debugger::process_status(int status) {
 
@@ -189,6 +217,7 @@ void MiniDbg::Debugger::process_status(int status) {
     }
 }
 
+
 void MiniDbg::Debugger::set_breakpoint_at_address( std::intptr_t addr ) {
 
     std::cout << "Setting breakpoint at address " << std::showbase << std::hex << addr << std::endl;
@@ -199,25 +228,30 @@ void MiniDbg::Debugger::set_breakpoint_at_address( std::intptr_t addr ) {
     m_breakpoints.emplace( addr, bp ) ;
 }
 
+
 uint64_t MiniDbg::Debugger::read_memory( uint64_t address ) {
 
     return ptrace( PTRACE_PEEKDATA, m_pid, address, nullptr );
 }
+
 
 void MiniDbg::Debugger::write_memory( uint64_t address, uint64_t value ) {
 
     ptrace( PTRACE_POKEDATA, m_pid, address, value );
 }
 
+
 uint64_t MiniDbg::Debugger::get_pc() {
 
     return get_register_value( m_pid, MiniDbg::Register::rip );
 }
 
-void MiniDbg::Debugger::set_pc( uint64_t pc)  {
+
+void MiniDbg::Debugger::set_pc( uint64_t pc )  {
 
     set_register_value( m_pid, MiniDbg::Register::rip, pc );
 }
+
 
 void MiniDbg::Debugger::step_over_breakpoint() {
 
@@ -234,6 +268,7 @@ void MiniDbg::Debugger::step_over_breakpoint() {
         }
     }
 }
+
 
 void MiniDbg::Debugger::wait_for_signal() {
  
@@ -258,11 +293,12 @@ void MiniDbg::Debugger::wait_for_signal() {
     }
 }
 
+
 void MiniDbg::Debugger::dump_registers() {
  
-    for (const MiniDbg::RegDescriptor& rd : g_register_descriptors) {
+    for ( const MiniDbg::RegDescriptor& rd : g_register_descriptors ) {
 
-        std::cout << rd.name << std::showbase << std::setfill('0') << std::setw(16) << std::hex << get_register_value(m_pid, rd.r) << std::endl;
+        std::cout << rd.name << " " << std::showbase << std::hex << get_register_value( m_pid, rd.r ) << std::endl;
     }
 }
 
@@ -279,10 +315,12 @@ void MiniDbg::Debugger::initialise_load_address() {
     }
 }
 
+
 uint64_t MiniDbg::Debugger::offset_load_address( uint64_t addr ) {
 
    return addr - m_load_address;
 }
+
 
 dwarf::die MiniDbg::Debugger::get_function_from_pc( uint64_t pc ) {
 
@@ -306,6 +344,7 @@ dwarf::die MiniDbg::Debugger::get_function_from_pc( uint64_t pc ) {
     throw std::out_of_range( "Cannot find function" );
 }
 
+
 dwarf::line_table::iterator MiniDbg::Debugger::get_line_entry_from_pc( uint64_t pc ) {
 
     for ( const dwarf::compilation_unit& cu : m_dwarf.compilation_units() ) {
@@ -326,8 +365,10 @@ dwarf::line_table::iterator MiniDbg::Debugger::get_line_entry_from_pc( uint64_t 
         }
     }
 
+    std::cerr << "Cannot find line entry for address " << std::showbase << std::hex << pc << std::endl;
     throw std::out_of_range( "Cannot find line entry" );
 }
+
 
 void MiniDbg::Debugger::print_source( const std::string& file_name, unsigned line, unsigned n_lines_context ) {
 
@@ -362,12 +403,14 @@ void MiniDbg::Debugger::print_source( const std::string& file_name, unsigned lin
     std::cout << std::endl;
 }
 
+
 siginfo_t MiniDbg::Debugger::get_signal_info() {
 
     siginfo_t info;
     ptrace( PTRACE_GETSIGINFO, m_pid, nullptr, &info );
     return info;
 }
+
 
 void MiniDbg::Debugger::handle_sigtrap( siginfo_t info ) {
 
@@ -396,4 +439,124 @@ void MiniDbg::Debugger::handle_sigtrap( siginfo_t info ) {
             std::cout << "Unknown SIGTRAP code " << std::dec << info.si_code << std::endl;
             break;
     }
+}
+
+
+void MiniDbg::Debugger::single_step_instruction() {
+
+    ptrace( PTRACE_SINGLESTEP, m_pid, nullptr, nullptr );
+    wait_for_signal();
+}
+
+
+void MiniDbg::Debugger::single_step_instruction_with_breakpoint_check() {
+    
+    if ( m_breakpoints.count( get_pc() ) ) {
+    
+        step_over_breakpoint();
+    }
+    else {
+
+        single_step_instruction();
+    }
+}
+
+
+void MiniDbg::Debugger::remove_breakpoint( std::intptr_t addr ) {
+
+    if ( m_breakpoints.at( addr ).is_enabled() ) {
+        
+        m_breakpoints.at( addr ).Disable();
+    }
+
+    m_breakpoints.erase( addr );
+}
+
+
+void MiniDbg::Debugger::step_out() {
+
+    uint64_t frame_pointer = get_register_value( m_pid, Register::rbp );
+    uint64_t return_address = read_memory( frame_pointer + 8 );
+
+    bool should_remove_breakpoint = false;
+
+    if ( !m_breakpoints.count( return_address ) ) {
+        
+        set_breakpoint_at_address( return_address );
+        should_remove_breakpoint = true;
+    }
+
+    continue_execution();
+
+    if ( should_remove_breakpoint ) {
+
+        remove_breakpoint( return_address );
+    }
+}
+
+
+uint64_t MiniDbg::Debugger::get_offset_pc() {
+
+    return offset_load_address( get_pc() );
+}
+
+void MiniDbg::Debugger::step_in() {
+
+   unsigned int line = get_line_entry_from_pc( get_offset_pc() )->line;
+
+   while ( get_line_entry_from_pc( get_offset_pc() )->line == line ) {
+      
+      single_step_instruction_with_breakpoint_check();
+   }
+
+   dwarf::line_table::iterator line_entry = get_line_entry_from_pc( get_offset_pc() );
+   print_source( line_entry->file->path, line_entry->line );
+}
+
+
+void MiniDbg::Debugger::step_over() {
+
+    dwarf::die func = get_function_from_pc( get_offset_pc() );
+    dwarf::taddr func_entry = dwarf::at_low_pc( func );
+    dwarf::taddr func_end = dwarf::at_high_pc( func );
+
+    dwarf::line_table::iterator line = get_line_entry_from_pc( func_entry ) ;
+    dwarf::line_table::iterator start_line = get_line_entry_from_pc( get_offset_pc() );
+
+    std::vector<std::intptr_t> to_delete;
+
+    while ( line->address < func_end ) {
+
+        uint64_t load_address = offset_dwarf_address( line->address );
+
+        if ( line->address != start_line->address && !m_breakpoints.count( load_address ) ) {
+            
+            set_breakpoint_at_address( load_address );
+            to_delete.push_back( load_address );
+        }
+
+        ++line;
+    }
+
+    uint64_t frame_pointer = get_register_value( m_pid, Register::rbp );
+    uint64_t return_address = read_memory( frame_pointer + 8 );
+
+    if ( !m_breakpoints.count( return_address ) ) {
+
+        set_breakpoint_at_address( return_address );
+        to_delete.push_back( return_address );
+    }
+
+    continue_execution();
+
+    for ( std::intptr_t addr : to_delete ) {
+        
+        remove_breakpoint( addr );
+    }
+}
+
+
+uint64_t MiniDbg::Debugger::offset_dwarf_address( uint64_t addr ) {
+
+   return addr + m_load_address;
 }

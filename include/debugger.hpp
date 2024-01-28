@@ -34,6 +34,7 @@ namespace MiniDbg {
         void dump_registers(); 
         
         uint64_t get_pc();
+        uint64_t get_offset_pc();
         void set_pc( uint64_t pc );
 
         void step_over_breakpoint();
@@ -43,6 +44,7 @@ namespace MiniDbg {
 
         void initialise_load_address();
         uint64_t offset_load_address( uint64_t addr );
+        uint64_t offset_dwarf_address( uint64_t addr );
 
         dwarf::die get_function_from_pc( uint64_t pc );
         dwarf::line_table::iterator get_line_entry_from_pc( uint64_t pc );
@@ -50,6 +52,15 @@ namespace MiniDbg {
         uint64_t read_memory( uint64_t address );
         void write_memory( uint64_t address, uint64_t value );   
         void print_source( const std::string& file_name, unsigned line, unsigned n_lines_context = 2 );
+
+        void single_step_instruction();
+        void single_step_instruction_with_breakpoint_check();
+
+        void step_out();
+        void step_in();
+        void step_over();
+
+        void remove_breakpoint(std::intptr_t addr);
 
     private:    
 
