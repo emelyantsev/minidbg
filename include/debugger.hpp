@@ -14,6 +14,8 @@
 #include "dwarf/dwarf++.hh"
 #include "elf/elf++.hh"
 
+#include "symbols.hpp"
+
 namespace MiniDbg {
 
     class Debugger {
@@ -27,10 +29,14 @@ namespace MiniDbg {
     private:
     
         void handle_command( const std::string& line );
+
         void continue_execution();
         void process_status( int status );
 
-        void set_breakpoint_at_address( std::intptr_t addr );    
+        void set_breakpoint_at_address( std::intptr_t addr );   
+        void set_breakpoint_at_function( const std::string& name ); 
+        void set_breakpoint_at_source_line( const std::string& file, unsigned line );
+
         void dump_registers(); 
         
         uint64_t get_pc();
@@ -51,6 +57,7 @@ namespace MiniDbg {
 
         uint64_t read_memory( uint64_t address );
         void write_memory( uint64_t address, uint64_t value );   
+        
         void print_source( const std::string& file_name, unsigned line, unsigned n_lines_context = 2 );
 
         void single_step_instruction();
@@ -61,6 +68,8 @@ namespace MiniDbg {
         void step_over();
 
         void remove_breakpoint(std::intptr_t addr);
+
+        std::vector<Symbol> lookup_symbol(const std::string& name);
 
     private:    
 

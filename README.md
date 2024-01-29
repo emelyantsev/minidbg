@@ -6,17 +6,19 @@
 4. [Elves and dwarves](https://blog.tartanllama.xyz/writing-a-linux-debugger-elf-dwarf/)
 5. [Source and signals](https://blog.tartanllama.xyz/writing-a-linux-debugger-source-signal/)
 6. [Source-level stepping](https://blog.tartanllama.xyz/writing-a-linux-debugger-dwarf-step/)
-
-____________________________________________________________________
+7. [Source-level breakpoints](https://blog.tartanllama.xyz/writing-a-linux-debugger-source-break/)
+___
 
 #### Usage:
 
 ```
 ./minidbg <program name>
 
-cont   (continue)
+cont -> continue
 
 break <OxADDRESS>
+      <line>:<filename>  
+      <function_name>  
 
 register <dump>
 register <read> <register_name>
@@ -29,6 +31,8 @@ stepi
 next
 finish
 
-Ctrl+D   (exit)
+symbol <symbol_name>
+
+Ctrl+D  -> exit
 
 ```

@@ -12,3 +12,10 @@ objdump -M intel -d <program_file_name>
 
 
 https://stackoverflow.com/questions/2616906/how-do-i-output-coloured-text-to-a-linux-terminal
+
+
+gdb:
+
+    set disassembly-flavor intel
+
+    

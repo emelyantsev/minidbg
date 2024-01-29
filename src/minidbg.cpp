@@ -90,6 +90,16 @@ bool is_prefix( const std::string& s, const std::string& of ) {
 }
 
 
+bool is_suffix( const std::string& s, const std::string& of ) {
+
+    if ( s.size() > of.size() ) return false;
+    
+    size_t diff = of.size() - s.size();
+    
+    return std::equal( s.begin(), s.end(), of.begin() + diff );
+}
+
+
 /* ----------------- Debugger -------------- */
 
 
@@ -127,10 +137,22 @@ void MiniDbg::Debugger::handle_command( const std::string& line ) {
 
         continue_execution();
     }
-    else if ( is_prefix( command, "break" ) ) {
-    
-        std::string addr ( args[1], 2 ); // assume 0xADDRESS
-        set_breakpoint_at_address( std::stol( addr, 0, 16 ) );
+    else if( is_prefix( command, "break" ) ) {
+
+            if ( args[1][0] == '0' && args[1][1] == 'x') {
+                
+                std::string addr (args[1], 2);
+                set_breakpoint_at_address( std::stol(addr, 0, 16) );
+            }
+            else if ( args[1].find(':') != std::string::npos ) {
+
+                std::vector<std::string> file_and_line = split( args[1], ':' ); 
+               set_breakpoint_at_source_line( file_and_line[0], std::stoi( file_and_line[1]) );
+            }
+            else {
+
+                set_breakpoint_at_function (args[1] );
+            }
     }
     else if( is_prefix( command, "step" ) ) {
         
@@ -185,6 +207,15 @@ void MiniDbg::Debugger::handle_command( const std::string& line ) {
         catch ( std::exception& e ) {
 
             std::cerr << "Error printing source " << e.what() << std::endl;
+        }
+    }
+    else if( is_prefix( command, "symbol" ) ) {
+
+        std::vector<MiniDbg::Symbol> syms = lookup_symbol( args[1] );
+
+        for (const MiniDbg::Symbol& s : syms) {
+
+            std::cout << s.name << ' ' << to_string( s.type ) << " " << std::hex << s.addr << std::endl;
         }
     }
     else {
@@ -349,7 +380,7 @@ dwarf::line_table::iterator MiniDbg::Debugger::get_line_entry_from_pc( uint64_t 
 
     for ( const dwarf::compilation_unit& cu : m_dwarf.compilation_units() ) {
 
-        if ( die_pc_range( cu.root() ).contains( pc ) ) {
+        if ( dwarf::die_pc_range( cu.root() ).contains( pc ) ) {
         
             const dwarf::line_table& lt = cu.get_line_table();
             dwarf::line_table::iterator it = lt.find_address( pc );
@@ -559,4 +590,68 @@ void MiniDbg::Debugger::step_over() {
 uint64_t MiniDbg::Debugger::offset_dwarf_address( uint64_t addr ) {
 
    return addr + m_load_address;
+}
+
+
+void MiniDbg::Debugger::set_breakpoint_at_function(const std::string& name) {
+
+    for ( const dwarf::compilation_unit& cu : m_dwarf.compilation_units() ) {
+        
+        for ( const dwarf::die& die : cu.root() ) {
+
+            if ( die.has( dwarf::DW_AT::name ) && dwarf::at_name( die ) == name ) {
+
+                dwarf::taddr low_pc = dwarf::at_low_pc( die );
+                dwarf::line_table::iterator entry = get_line_entry_from_pc( low_pc );
+                ++entry; //skip prologue
+                set_breakpoint_at_address( offset_dwarf_address( entry->address ) );
+            }
+        }
+    }
+}
+
+
+void MiniDbg::Debugger::set_breakpoint_at_source_line( const std::string& file, unsigned line ) {
+
+    for ( const dwarf::compilation_unit& cu : m_dwarf.compilation_units() )  {
+
+        if ( is_suffix( file, dwarf::at_name( cu.root() ) ) ) {
+            
+            const dwarf::line_table& lt = cu.get_line_table();
+
+            for ( const dwarf::line_table::entry& entry : lt ) {
+            
+                if ( entry.is_stmt && entry.line == line ) {
+                    
+                    set_breakpoint_at_address( offset_dwarf_address( entry.address ) );
+                    return;
+                }
+            }
+        }
+    }
+}
+
+
+std::vector<MiniDbg::Symbol> MiniDbg::Debugger::lookup_symbol( const std::string& name ) {
+
+   std::vector<MiniDbg::Symbol> syms;
+
+   for ( const elf::section& sec : m_elf.sections() ) {
+
+        if ( sec.get_hdr().type != elf::sht::symtab && sec.get_hdr().type != elf::sht::dynsym ) {
+            
+            continue;
+        }
+
+        for ( const elf::sym& sym : sec.as_symtab() ) {
+            
+            if ( sym.get_name() == name ) {
+
+                const elf::Sym<>& d = sym.get_data();
+                syms.push_back( MiniDbg::Symbol{ MiniDbg::to_symbol_type( d.type() ), sym.get_name(), d.value } );
+            }
+        }
+   }
+
+   return syms;
 }
