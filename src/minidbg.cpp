@@ -209,6 +209,10 @@ void MiniDbg::Debugger::handle_command( const std::string& line ) {
             std::cerr << "Error printing source " << e.what() << std::endl;
         }
     }
+    else if( is_prefix( command, "backtrace" ) ) {
+
+        print_backtrace();
+    }
     else if( is_prefix( command, "symbol" ) ) {
 
         std::vector<MiniDbg::Symbol> syms = lookup_symbol( args[1] );
@@ -654,4 +658,28 @@ std::vector<MiniDbg::Symbol> MiniDbg::Debugger::lookup_symbol( const std::string
    }
 
    return syms;
+}
+
+
+void MiniDbg::Debugger::print_backtrace() {
+
+    auto output_frame = [frame_number = 0] (auto&& func) mutable {
+
+        std::cout << "frame #" << frame_number++ << ": " << std::hex << dwarf::at_low_pc( func )
+                  << ' ' << dwarf::at_name( func ) << std::endl;
+    };
+
+    dwarf::die current_func = get_function_from_pc( offset_load_address( get_pc() ) );
+    output_frame( current_func );
+
+    uint64_t frame_pointer = get_register_value( m_pid, Register::rbp ) ;
+    uint64_t return_address = read_memory( frame_pointer + 8 ) ;
+
+    while ( dwarf::at_name( current_func ) != "main") {
+
+        current_func = get_function_from_pc( offset_load_address( return_address ) );
+        output_frame( current_func );
+        frame_pointer = read_memory( frame_pointer );
+        return_address = read_memory( frame_pointer + 8 );
+    }
 }

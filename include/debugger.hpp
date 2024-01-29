@@ -38,6 +38,7 @@ namespace MiniDbg {
         void set_breakpoint_at_source_line( const std::string& file, unsigned line );
 
         void dump_registers(); 
+        void print_backtrace();
         
         uint64_t get_pc();
         uint64_t get_offset_pc();

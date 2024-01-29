@@ -7,6 +7,7 @@
 5. [Source and signals](https://blog.tartanllama.xyz/writing-a-linux-debugger-source-signal/)
 6. [Source-level stepping](https://blog.tartanllama.xyz/writing-a-linux-debugger-dwarf-step/)
 7. [Source-level breakpoints](https://blog.tartanllama.xyz/writing-a-linux-debugger-source-break/)
+8. [Stack unwinding](https://blog.tartanllama.xyz/writing-a-linux-debugger-unwinding/)
 ___
 
 #### Usage:
@@ -27,6 +28,7 @@ register <write> <register_name> <0xVALUE>
 memory <read> <0xADDRESS>
 memory <write> <0xADDRESS> <0xVALUE>
 
+step
 stepi
 next
 finish
