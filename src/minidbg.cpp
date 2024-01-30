@@ -10,7 +10,7 @@
 
 #include "debugger.hpp"
 #include "registers.hpp"
-
+#include "dwarf_helpers.hpp"
 #include "linenoise.h"
 
 
@@ -212,6 +212,10 @@ void MiniDbg::Debugger::handle_command( const std::string& line ) {
     else if( is_prefix( command, "backtrace" ) ) {
 
         print_backtrace();
+    }
+    else if( is_prefix( command, "variables" ) ) {
+
+        read_variables();
     }
     else if( is_prefix( command, "symbol" ) ) {
 
@@ -681,5 +685,50 @@ void MiniDbg::Debugger::print_backtrace() {
         output_frame( current_func );
         frame_pointer = read_memory( frame_pointer );
         return_address = read_memory( frame_pointer + 8 );
+    }
+}
+
+
+void MiniDbg::Debugger::read_variables() {
+
+    dwarf::die func = get_function_from_pc( get_offset_pc() );
+
+    for ( const dwarf::die& die : func ) {
+
+        if ( die.tag == dwarf::DW_TAG::variable ) {
+            
+            dwarf::value loc_val = die[ dwarf::DW_AT::location ];
+
+            if ( loc_val.get_type() == dwarf::value::type::exprloc ) {   //only supports exprlocs for now
+
+                ptrace_expr_context context( m_pid, m_load_address );
+                dwarf::expr_result result = loc_val.as_exprloc().evaluate( &context );
+
+                switch ( result.location_type ) {
+
+                    case dwarf::expr_result::type::address:
+                    {
+                        dwarf::taddr offset_addr = result.value;
+                        uint64_t value = read_memory( offset_addr );
+                        std::cout << dwarf::at_name( die ) << " (" << std::hex << offset_addr << ") = " << value << std::endl;
+                        break;
+                    }
+
+                    case dwarf::expr_result::type::reg:
+                    {
+                        uint64_t value = get_register_value_from_dwarf_register( m_pid, result.value );
+                        std::cout << dwarf::at_name( die ) << " (reg " << std::hex << result.value << ") = " << value << std::endl;
+                        break;
+                    }
+
+                    default:
+                        throw std::runtime_error( "Unhandled variable location" );
+                }
+            }
+            else {
+                
+                throw std::runtime_error( "Unhandled variable location" );
+            }
+        }
     }
 }
