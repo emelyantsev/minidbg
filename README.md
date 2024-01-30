@@ -8,6 +8,10 @@
 6. [Source-level stepping](https://blog.tartanllama.xyz/writing-a-linux-debugger-dwarf-step/)
 7. [Source-level breakpoints](https://blog.tartanllama.xyz/writing-a-linux-debugger-source-break/)
 8. [Stack unwinding](https://blog.tartanllama.xyz/writing-a-linux-debugger-unwinding/)
+9. [Handling variables](https://blog.tartanllama.xyz/writing-a-linux-debugger-variables/)
+10. [Advanced topics](https://blog.tartanllama.xyz/writing-a-linux-debugger-advanced-topics/)
+
+
 ___
 
 #### Usage:
@@ -27,6 +31,8 @@ register <write> <register_name> <0xVALUE>
 
 memory <read> <0xADDRESS>
 memory <write> <0xADDRESS> <0xVALUE>
+
+variables
 
 step
 stepi

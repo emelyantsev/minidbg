@@ -18,4 +18,7 @@ gdb:
 
     set disassembly-flavor intel
 
+
+https://sourceware.org/gdb/current/onlinedocs/gdb.html/Non_002dStop-Mode.html
+
     

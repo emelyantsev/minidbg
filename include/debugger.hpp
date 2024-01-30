@@ -36,7 +36,7 @@ namespace MiniDbg {
         void set_breakpoint_at_address( std::intptr_t addr );   
         void set_breakpoint_at_function( const std::string& name ); 
         void set_breakpoint_at_source_line( const std::string& file, unsigned line );
-        void remove_breakpoint(std::intptr_t addr);
+        void remove_breakpoint( std::intptr_t addr );
 
         void dump_registers(); 
         void print_backtrace();

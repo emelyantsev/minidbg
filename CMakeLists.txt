@@ -43,8 +43,11 @@ add_custom_target(
    COMMAND make
    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/ext/libelfin
 )
+
 target_link_libraries(minidbg
                       ${PROJECT_SOURCE_DIR}/ext/libelfin/dwarf/libdwarf++.so
                       ${PROJECT_SOURCE_DIR}/ext/libelfin/elf/libelf++.so)
+
+set_target_properties(minidbg PROPERTIES COMPILE_FLAGS "-g")
 
 add_dependencies(minidbg libelfin)
