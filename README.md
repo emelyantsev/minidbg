@@ -41,6 +41,10 @@ finish
 
 symbol <symbol_name>
 
+run
+attach <PID>
+detach
+
 Ctrl+D  -> exit
 
 ```
