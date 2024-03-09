@@ -4,27 +4,36 @@
 #include <utility>
 #include <string>
 #include <unordered_map>
+
 #include <linux/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
 
-#include "breakpoint.hpp"
-
 #include "dwarf/dwarf++.hh"
 #include "elf/elf++.hh"
 
+#include "linenoise.h"
+
+#include "breakpoint.hpp"
 #include "symbols.hpp"
+#include "dwarf_helpers.hpp"
+
 
 namespace MiniDbg {
 
     class Debugger {
+
+        enum class State {
+            RUNNING,
+            NOT_RUNNING
+        };
     
     public:
 
-        Debugger( const std::string& prog_name, pid_t pid ) ;
+        Debugger( const std::string& prog_name ) ;
 
-        void Run();
+        int Run();
 
     private:
     
@@ -37,6 +46,7 @@ namespace MiniDbg {
         void set_breakpoint_at_function( const std::string& name ); 
         void set_breakpoint_at_source_line( const std::string& file, unsigned line );
         void remove_breakpoint( std::intptr_t addr );
+        void step_over_breakpoint();
 
         void dump_registers(); 
         void print_backtrace();
@@ -46,7 +56,6 @@ namespace MiniDbg {
         uint64_t get_offset_pc();
         void set_pc( uint64_t pc );
 
-        void step_over_breakpoint();
         void wait_for_signal();
         siginfo_t get_signal_info();
         void handle_sigtrap( siginfo_t info );
@@ -71,14 +80,28 @@ namespace MiniDbg {
 
         std::vector<Symbol> lookup_symbol( const std::string& name );
 
+        void execute_debuggee( const std::string& prog_name ) ;
+        void attach_to_debuggee( const int pid ) ;
+        void launch_debuggee( const std::string& prog_name );
+        void detach_debuggee();
+
+        void clear_debuggee_data();
+        std::string get_executable_path_by_pid( const int pid );
+
     private:    
 
         std::string m_prog_name;
         pid_t m_pid;
-        std::unordered_map<std::intptr_t, Breakpoint> m_breakpoints;
+        
         uint64_t m_load_address = 0;
         dwarf::dwarf m_dwarf;
         elf::elf m_elf;
+        int m_fd;
+
+        std::unordered_map<std::intptr_t, Breakpoint> m_breakpoints;
+
+        State m_state = State::NOT_RUNNING;
+
     };
 }
 
