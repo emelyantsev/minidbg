@@ -15,21 +15,21 @@ namespace MiniDbg {
 
         void Enable() {
         
-            long data = ptrace( PTRACE_PEEKDATA, m_pid, m_addr, nullptr );
+            long data = ::ptrace( PTRACE_PEEKDATA, m_pid, m_addr, nullptr );
             m_saved_data = static_cast<uint8_t>( data & 0xFF ); //save bottom byte
             
             long int3 = 0xCC;
             long data_with_int3 = ( ( data & ~0xFF ) | int3 ); //set bottom byte to 0xcc
 
-            ptrace( PTRACE_POKEDATA, m_pid, m_addr, data_with_int3 );
+            ::ptrace( PTRACE_POKEDATA, m_pid, m_addr, data_with_int3 );
             m_enabled = true;
         }
 
         void Disable() {
 
-            long data = ptrace( PTRACE_PEEKDATA, m_pid, m_addr, nullptr );
+            long data = ::ptrace( PTRACE_PEEKDATA, m_pid, m_addr, nullptr );
             long restored_data = ( ( data & ~0xFF )  | m_saved_data );
-            ptrace( PTRACE_POKEDATA, m_pid, m_addr, restored_data );
+            ::ptrace( PTRACE_POKEDATA, m_pid, m_addr, restored_data );
             m_enabled = false;
         }
 

@@ -60,7 +60,7 @@ namespace MiniDbg {
         siginfo_t get_signal_info();
         void handle_sigtrap( siginfo_t info );
 
-        void initialise_load_address();
+        void initialize_load_address();
         uint64_t offset_load_address( uint64_t addr );
         uint64_t offset_dwarf_address( uint64_t addr );
 

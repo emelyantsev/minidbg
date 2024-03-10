@@ -46,7 +46,7 @@ uint64_t get_register_value( pid_t pid, Register r ) {
     
     user_regs_struct regs;
 
-    ptrace( PTRACE_GETREGS, pid, nullptr, &regs );
+    ::ptrace( PTRACE_GETREGS, pid, nullptr, &regs );
 
     auto it = std::find_if( std::begin( g_register_descriptors ), std::end( g_register_descriptors ),
                             [ r ]( const RegDescriptor& rd ) { return rd.r == r; } );
@@ -58,13 +58,13 @@ uint64_t get_register_value( pid_t pid, Register r ) {
 void set_register_value( pid_t pid, Register r, uint64_t value ) {
 
     user_regs_struct regs;
-    ptrace( PTRACE_GETREGS, pid, nullptr, &regs );
+    ::ptrace( PTRACE_GETREGS, pid, nullptr, &regs );
     
     auto it = std::find_if( std::begin( g_register_descriptors ), std::end( g_register_descriptors ),
                             [r](const RegDescriptor& rd) { return rd.r == r; });
 
     *(reinterpret_cast< uint64_t* >( &regs ) + (it - std::begin( g_register_descriptors ) ) ) = value;
-    ptrace( PTRACE_SETREGS, pid, nullptr, &regs );
+    ::ptrace( PTRACE_SETREGS, pid, nullptr, &regs );
 }
 
 
@@ -95,4 +95,4 @@ Register get_register_from_name( const std::string& name ) {
     return it->r;
 }
 
-}
+} // namespace MiniDbg
